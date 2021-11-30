@@ -1,0 +1,211 @@
+//-----------------------------------------------------------------------------
+// Example of how to use the Azure IoT Hub
+// 
+//-----------------------------------------------------------------------------
+
+INCLUDE rtcu.inc
+INCLUDE az_iot.inc
+
+VAR
+   iface             : SINT   := 2;// The network interface to use
+   
+   server            : STRING := "<server name>";
+   deviceId          : STRING := "<device ID>";
+   
+   // Certificate based authentication:
+   cert              : STRING := "<certificate name>";
+   cert_pass         : STRING := "<password for private key>";
+   
+   // Pregenerated SAS token
+   SAS_token         : STRING := "<SAS token>";
+   
+   // Parameters for generating SAS Token locally: 
+   // Base 64 encoded shared access key
+   SharedAccessKey   : STRING := "<shared access key>";
+   // Time difference between UTC and device time
+   tz_offset         : INT    := 0; 
+   // Number of seconds from when the token was created until it should expire.
+   sas_lifetime      : DINT   := 86400; 
+
+   
+   // Authentication type:
+   // TRUE:  use certificates
+   // FALSE: use SAS tokens.
+   use_certs         : BOOL   := FALSE; 
+   
+   // SAS tokens:
+   // TRUE:  generate the SAS token from the shared access key.
+   // FALSE: use the value from the SAS_token variable.
+   use_sak           : BOOL   := TRUE; 
+   
+   
+   text     : STRING;
+   time     : TON;
+   buf      : ARRAY [1..150] OF SINT;
+   
+   rxd      : aziReceiveMessage;
+   msg      : ARRAY [1..5000] OF SINT;
+   password : STRING;
+END_VAR;
+
+
+FUNCTION print_large_data;
+VAR_INPUT
+   data : PTR;
+   size : INT;
+END_VAR;
+VAR
+   i    : INT := 0;
+   len  : INT := 254;
+END_VAR;
+   while i < size DO
+      IF(i+len > size) THEN
+         len := size-i;
+      END_IF;
+      DebugMsg(message := strFromMemory(src := data+i, len := len));
+      i:=i+len;
+   END_WHILE;
+END_FUNCTION;
+
+
+PROGRAM example;
+VAR
+   i     : INT;
+   str1  : STRING;
+   str2  : STRING;
+   temp  : INT;
+   rc    : INT;
+END_VAR;
+
+   DebugMsg(message := "Initialize Network...");
+   IF (iface = 1) THEN
+      gsmPower(power := ON);
+   END_IF;
+   rc := netOpen(iface:=iface);
+   DebugFmt(message := "netOpen: \1", v1:=rc);
+   
+   
+   IF use_certs THEN
+   // IOT hub, using certificate
+      password := "";// No password when using certificate.
+   ELSE
+      // IOT hub, using SAS token
+      IF use_sak THEN
+         // Create SAS from SAK.
+         IF aziLoadModule() = 0 THEN
+            password := aziCreateSAS(SharedAccessKey:=SharedAccessKey, 
+                                     host:=server, deviceId:=DeviceId, 
+                                     tz_offset:= tz_offset, lifetime:=sas_lifetime);
+         ELSE
+            DebugMsg(message:="Failed to load module");
+         END_IF;
+      ELSE
+         password := SAS_token;
+      END_IF;
+   END_IF;   
+   
+   WHILE NOT netConnected(iface:=iface) DO
+      DebugMsg(message := "Waiting for network connection...");
+      Sleep(delay := 2500);
+   END_WHILE;   
+   
+   DebugFmt(message := "Connect to "+server);
+   
+   DebugFmt(message := "clientid: "+deviceId);
+   
+   IF use_certs THEN
+      rc  := aziOpenCert(deviceId := deviceId, server:=server, iface := iface, 
+                        cert := cert, cert_pass := cert_pass);
+   ELSE
+      rc  := aziOpenSAS(deviceId := deviceId, server:=server, iface := iface, 
+                        password:=password);
+   END_IF;
+   DebugFmt(message := "open IOT= \1", v1 := rc);
+   // Setup trigger to report temperature every 30 seconds.
+   time(trig := OFF, pt := 30000);
+   
+   IF NOT aziConnected() THEN
+      rc := aziStatus();
+      DebugFmt(message := "Status=\1", v1 := rc);
+   END_IF;
+
+
+   // Subscribe to the events
+   rc := aziSubscribe();
+   DebugFmt(message := "Subscribed= \1", v1 := rc);
+   
+   // Prepare aziReceiveMessage function block
+   rxd(data := ADDR(msg), maxsize := SIZEOF(msg));
+   
+   // Request device twin properties
+   aziTwinRequest();
+BEGIN
+   time(trig := ON);
+   IF time.q THEN
+      // Send temperature to IoT hub
+      DebugFmt(message := "Publish");
+      temp := boardTemperature();
+      text := intToStr(v := temp / 100) + "." + dintToStr(v := abs(v := DINT(temp MOD 100)));
+      strToMemory(dst := ADDR(buf), str := text, len := strLen(str := text));
+      
+      rc := aziPublish(
+                        properties    := strFormat(
+                        format:="temperature=\1&key1=val2",
+                        v1:=temp),
+                        data     := ADDR(buf),
+                        size     := strLen(str := text)
+                       );
+      DebugFmt(message := "Published= \1", v1 := rc);
+      time(trig := OFF);
+   END_IF;
+   
+   rc := aziWaitEvent(timeout := 1);
+   IF rc > 0 THEN
+      DebugMsg(message := "Message received");
+      rxd();
+      IF(rxd.ready) THEN
+         DebugFmt(message := "-Type= \1", v1:=rxd.type );
+         DebugFmt(message := "-Size= \1", v1 := rxd.size);
+         DebugMsg(message := "-Data= " );
+         print_large_data(data:=ADDR(msg), size:=rxd.size);
+         CASE rxd.type OF
+            AZI_MESSAGE_TYPE_C2D_MSG:// Message
+            FOR i:= 1 TO 10 DO 
+               IF(aziGetProperty(index:=i, key:= str1, value:=str2) = 0) THEN
+                  DebugFmt(message:="prop \1: "+str1+" = " + str2, v1:=i);
+               END_IF;
+            END_FOR;
+
+            AZI_MESSAGE_TYPE_METHOD://Method
+               rc := aziGetMethodRequest(method:=str1);
+                  DebugFmt(message:="method "+str1+": \1: ", v1:=rc);
+               IF (str1="MethodName") THEN
+                  text := "{$"data$":$"content$"}";
+                  strToMemory(dst := ADDR(buf), str := text, len := strLen(str := text));
+                  rc := aziMethodReply(status:=42, data :=  ADDR(buf), size := strLen(str := text));
+                  DebugFmt(message:="method reply: \1: ", v1:=rc);
+               END_IF;
+
+            AZI_MESSAGE_TYPE_TWIN_RESPONSE://Twin response
+               DebugFmt(message:="aziTwinRequestStatus: \1", v1:=aziTwinRequestStatus());
+               
+               
+               // Report updated property. Not part of the handling for the twin request.
+               text := strFormat(format:=
+                  "{$"version$":15,$"batteryLevel$":\1, $"serial$":\4}", v1:=batPowerLevel(), v4:=boardSerialNumber());
+               strToMemory(dst := ADDR(buf), str := text, len := strLen(str := text));
+               
+               rc := aziTwinReportProperty(data:=ADDR(buf), size:=(strLen(str := text)));
+               DebugFmt(message:="aziTwinReportProperty: \1: "+text, v1:=rc);
+               
+            AZI_MESSAGE_TYPE_TWIN_REPORT://Twin report status            
+               DebugFmt(message:="aziTwinReportPropertyStatus: \1", v1:=aziTwinReportPropertyStatus());
+               
+            AZI_MESSAGE_TYPE_TWIN_CHANGED:// Twin change
+               DebugFmt(message:="aziTwinDesiredVersion: "+aziTwinDesiredVersion());
+               
+         END_CASE;
+      END_IF;
+   END_IF;
+END;
+END_PROGRAM;

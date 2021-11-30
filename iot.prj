@@ -1,0 +1,66 @@
+<?xml version="1.0" standalone="no" ?>
+<RTCUIDEProject>
+    <createversion>88.22</createversion>
+    <modifyversion>9.86</modifyversion>
+    <projecttype>VPL</projecttype>
+    <build>
+        <version>986</version>
+        <flags>239</flags>
+    </build>
+    <projectsetup>
+        <ExtImage>0</ExtImage>
+        <AppName>IoT Hub example</AppName>
+        <AppVer>200</AppVer>
+    </projectsetup>
+    <flags>
+        <flag>NX32L</flag>
+        <flag>NX32</flag>
+        <flag>X32</flag>
+        <flag>LARGE</flag>
+        <flag>EIS</flag>
+        <flag>LSS</flag>
+        <flag>DIRTY</flag>
+        <flag>DRIVE</flag>
+    </flags>
+    <defines />
+    <source>
+        <item>
+            <file>.\iot.vpl</file>
+        </item>
+    </source>
+    <include>
+        <item>
+            <file>az_iot.inc</file>
+        </item>
+    </include>
+    <voice />
+    <ioext />
+    <jobs>
+        <job name="Job_iot">
+            <file>.\iot.vpx</file>
+            <class>1</class>
+            <config />
+        </job>
+    </jobs>
+    <projectdrive />
+    <files>
+        <filter name="VPL Program" />
+        <filter name="VPL Include">
+            <file title="az_iot.inc">
+                <RelativePath>az_iot.inc</RelativePath>
+            </file>
+        </filter>
+        <filter name="User" />
+        <filter name="LUA Program" />
+        <filter name="LUA Library" />
+        <filter name="Project Drive" />
+        <filter name="Platform Extension">
+            <file title="mod_azi.rmx">
+                <RelativePath>mod_azi.rmx</RelativePath>
+                <modified>1637840072</modified>
+            </file>
+        </filter>
+        <filter name="Internal Drive" />
+    </files>
+    <device />
+</RTCUIDEProject>

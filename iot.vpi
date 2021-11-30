@@ -1,0 +1,10 @@
+****************************************
+*** VPL interface definition file ***
+****************************************
+Program name: example
+DSEG size   : 6500 bytes
+
+   name                       type         ival  info
+----------------------------------------------------------------------------
+*** INPUTS:
+*** OUTPUTS:
