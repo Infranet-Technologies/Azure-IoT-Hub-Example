@@ -105,9 +105,39 @@ You should have the following items ready before beginning the process:
 - Note: this configuration data does not have to be hard-coded. The configuration data can typically also be managed in permanent flash.
 
   
+<a name="Integration with Azure IoT Explorer"></a>
+# Step 4: Integration with Azure IoT Explorer 
+
+Lauch Azure IoT Explorer and access your IOT Hub with iothubowner's primary connection string.
+
+<img src="C:\Users\Sebastian Kühne.INFRANET\AppData\Roaming\Typora\typora-user-images\image-20220111152849514.png" alt="image-20220111152849514" style="zoom:50%;" />
+
+Then follow the link: "View devices in this hub" and create a device:
+
+<img src="C:\Users\Sebastian Kühne.INFRANET\AppData\Roaming\Typora\typora-user-images\image-20220111153540447.png" alt="image-20220111153540447" style="zoom:50%;" />
+
+Find assingned device named CX530.
+
+<img src="C:\Users\Sebastian Kühne.INFRANET\AppData\Roaming\Typora\typora-user-images\image-20220111152431745.png" alt="image-20220111152431745" style="zoom:50%;" />
+
+If the device is connected correctly you can see thhe digital twin information:
+
+<img src="C:\Users\Sebastian Kühne.INFRANET\AppData\Roaming\Typora\typora-user-images\image-20220111153907848.png" alt="image-20220111153907848" style="zoom:50%;" />
+
+Or you can send messages to the device:
+
+<img src="C:\Users\Sebastian Kühne.INFRANET\AppData\Roaming\Typora\typora-user-images\image-20220111154028827.png" alt="image-20220111154028827" style="zoom:50%;" />
+
+You also can invoke a programmed method:
+
+<img src="C:\Users\Sebastian Kühne.INFRANET\AppData\Roaming\Typora\typora-user-images\image-20220111154416625.png" alt="image-20220111154416625" style="zoom:50%;" />
+
+
+
+
 
 <a name="AdditionalInformation"></a>
-# Step 4: Additional Information 
+# Step 5: Additional Information 
 
 With the Azure IoT Hub API it is very easy to integrate the communication to the Azure IoT Hub into your own application.
 
